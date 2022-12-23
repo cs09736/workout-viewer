@@ -1,22 +1,31 @@
 import os
-from bs4 import BeautifulSoup as bs
-from PIL import Image, ImageDraw
+import numpy as np
+from bs4 import BeautifulSoup
+import cv2
+import progressbar
 
 UPPER_LATITUDE = -37.7745
 LOWER_LATITUDE = -38.0035
 UPPER_LONGITUDE = 145.1716
 LOWER_LONGITUDE = 144.8863
-# 36 km wide
-# 23 km tall
-# image size = 2300x3600 px
+USE_BACKGROUND_IMAGE = False
+RED = (255,0,0)
+WHITE = (255,255,255)
+LINE_THICKNESS = 1
+IMAGE_WIDTH = 4096
+IMAGE_HEIGHT = 4096
+MAP_FILE = '/home/samcantwell/Nextcloud/map.png'
+ROUTE_DIRECTORY = "/Users/samcantwell/Nextcloud/workout-routes"
+WRITE_VIDEO = False
+FPS = 24.0
+VIDEO_WRITE_FREQUENCY = 1000
+
+write_video = WRITE_VIDEO
+route_directory  = ROUTE_DIRECTORY
 
 
-
-#image = Image.new('RGB', (IMG_WIDTH, IMG_HEIGHT), color=0)
-image = Image.open('/home/sam/Nextcloud/map.png', 'r')
-draw = ImageDraw.Draw(image)
-IMG_WIDTH = image.size[0]
-IMG_HEIGHT = image.size[1]
+def sort_function(filename):
+	return filename.split("_")[1]
 
 
 def coordinate_to_pixel(latitude, longitude):
@@ -26,46 +35,73 @@ def coordinate_to_pixel(latitude, longitude):
 	latitude_offset = latitude - LOWER_LATITUDE
 	longitude_offset = longitude - LOWER_LONGITUDE
 
-	x_offset = IMG_WIDTH * longitude_offset / degrees_wide
-	y_offset = IMG_HEIGHT * latitude_offset / degrees_tall
+	x_offset = img_width * longitude_offset / degrees_wide
+	y_offset = img_height * latitude_offset / degrees_tall
 
 	x_position = x_offset
-	y_position = IMG_HEIGHT - y_offset
-	return (x_position, y_position)
+	y_position = img_height - y_offset
+	return (int(x_position), int(y_position))
 
 
-# Test code to print each file name in directory
-directory  = "/home/sam/Nextcloud/workout-routes"
-for filename in os.listdir(directory):
+if USE_BACKGROUND_IMAGE:
+	image = cv2.imread(MAP_FILE)
+	img_width = image.shape[1]
+	img_height = image.shape[0]
+else:
+	image = np.zeros((IMAGE_WIDTH, IMAGE_HEIGHT, 3), dtype=np.uint8)
+	img_width = IMAGE_WIDTH
+	img_height = IMAGE_HEIGHT
+
+
+if write_video:
+	print("Generating video writer")
+	fourcc = cv2.VideoWriter_fourcc(*'XVID')
+	video_writer = cv2.VideoWriter("output.avi", fourcc, FPS, (img_width, img_height))
+
+
+print("Reading files")
+file_counter = 0
+counter = 0
+file_list = sorted(list(os.listdir(route_directory)), key=sort_function)
+widgets = [' [',progressbar.Timer(format= 'elapsed time: %(elapsed)s'),'] ',progressbar.Bar('*'),' (',progressbar.ETA(), ') ',]
+bar = progressbar.ProgressBar(max_value=len(file_list), widgets=widgets).start()
+for filename in file_list:
+	file_counter += 1
+	bar.update(file_counter)
+#	counter = 0
 	img_points = []
-	f = '/'.join([directory,filename])
+	f = '/'.join([route_directory,filename])
 
 	with open(f, 'r') as f:
 		data = f.read()
-		bs_data = bs(data, "xml")
-		bs_trkpts = bs_data.find_all('trkpt')
+		BeautifulSoup_data = BeautifulSoup(data, "xml")
+		BeautifulSoup_trkpts = BeautifulSoup_data.find_all('trkpt')
 	
-	for trkpt in bs_trkpts:
+	for trkpt in BeautifulSoup_trkpts:
 		latitude = float(trkpt.get('lat'))
 		longitude = float(trkpt.get('lon'))
 		points = coordinate_to_pixel(latitude, longitude)
 		img_points.append(points)
 	
+	length = len(img_points)
+	for index in range(length-1):
+		cv2.line(image, img_points[index], img_points[index+1], WHITE, LINE_THICKNESS)
+		if write_video:
+			counter += 1
+			if counter%VIDEO_WRITE_FREQUENCY == 0:
+				video_writer.write(image)
 
-	
-	draw.line(img_points, fill=(255,0,0), width=2)
+#	if write_video:
+#		video_writer.write(image)
+if write_video:
+	video_writer.write(image)
+##
 
+print("\nWriting final image")
+cv2.imwrite("resultMap.jpg", image)
 
+if write_video:
+	print("Releasing video file")
+	video_writer.release()
 
-image.save("resultMap.png", "PNG")
-
-
-
-
-print(coordinate_to_pixel(UPPER_LATITUDE, UPPER_LONGITUDE))
-
-
-
-
-print("Hello world!")
-print("A second message")
+print("All done")
