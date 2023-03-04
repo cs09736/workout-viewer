@@ -8,17 +8,18 @@ UPPER_LATITUDE = -37.7745
 LOWER_LATITUDE = -38.0035
 UPPER_LONGITUDE = 145.1716
 LOWER_LONGITUDE = 144.8863
-USE_BACKGROUND_IMAGE = False
-RED = (255,0,0)
+USE_BACKGROUND_IMAGE = True
+RED = (0,0,255)
 WHITE = (255,255,255)
-LINE_THICKNESS = 1
+LINE_THICKNESS = 2
 IMAGE_WIDTH = 4096
 IMAGE_HEIGHT = 4096
-MAP_FILE = '/home/samcantwell/Nextcloud/map.png'
+MAP_FILE = '/Users/samcantwell/Nextcloud/map.png'
 ROUTE_DIRECTORY = "/Users/samcantwell/Nextcloud/workout-routes"
 WRITE_VIDEO = False
 FPS = 24.0
 VIDEO_WRITE_FREQUENCY = 1000
+DOWNSIZE = False
 
 write_video = WRITE_VIDEO
 route_directory  = ROUTE_DIRECTORY
@@ -74,7 +75,7 @@ for filename in file_list:
 
 	with open(f, 'r') as f:
 		data = f.read()
-		BeautifulSoup_data = BeautifulSoup(data, "xml")
+		BeautifulSoup_data = BeautifulSoup(data, "xml",)
 		BeautifulSoup_trkpts = BeautifulSoup_data.find_all('trkpt')
 	
 	for trkpt in BeautifulSoup_trkpts:
@@ -85,7 +86,7 @@ for filename in file_list:
 	
 	length = len(img_points)
 	for index in range(length-1):
-		cv2.line(image, img_points[index], img_points[index+1], WHITE, LINE_THICKNESS)
+		cv2.line(image, img_points[index], img_points[index+1], RED, LINE_THICKNESS)
 		if write_video:
 			counter += 1
 			if counter%VIDEO_WRITE_FREQUENCY == 0:
@@ -98,7 +99,10 @@ if write_video:
 ##
 
 print("\nWriting final image")
-cv2.imwrite("resultMap.jpg", image)
+if DOWNSIZE:
+	image = cv2.resize(image, (img_width//2, img_height//2), interpolation=cv2.INTER_LINEAR)
+
+cv2.imwrite("resultMap.png", image)
 
 if write_video:
 	print("Releasing video file")
