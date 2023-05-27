@@ -8,7 +8,7 @@ UPPER_LATITUDE = -37.7745
 LOWER_LATITUDE = -38.0035
 UPPER_LONGITUDE = 145.1716
 LOWER_LONGITUDE = 144.8863
-USE_BACKGROUND_IMAGE = True
+USE_BACKGROUND_IMAGE = False
 RED = (0,0,255)
 WHITE = (255,255,255)
 LINE_THICKNESS = 2
@@ -19,7 +19,6 @@ ROUTE_DIRECTORY = "/Users/samcantwell/Nextcloud/workout-routes"
 WRITE_VIDEO = False
 FPS = 24.0
 VIDEO_WRITE_FREQUENCY = 1000
-DOWNSIZE = False
 
 write_video = WRITE_VIDEO
 route_directory  = ROUTE_DIRECTORY
@@ -48,10 +47,14 @@ if USE_BACKGROUND_IMAGE:
 	image = cv2.imread(MAP_FILE)
 	img_width = image.shape[1]
 	img_height = image.shape[0]
+	colour = RED
+	downsize = False
 else:
 	image = np.zeros((IMAGE_WIDTH, IMAGE_HEIGHT, 3), dtype=np.uint8)
 	img_width = IMAGE_WIDTH
 	img_height = IMAGE_HEIGHT
+	colour = WHITE
+	downsize = True
 
 
 if write_video:
@@ -86,7 +89,7 @@ for filename in file_list:
 	
 	length = len(img_points)
 	for index in range(length-1):
-		cv2.line(image, img_points[index], img_points[index+1], RED, LINE_THICKNESS)
+		cv2.line(image, img_points[index], img_points[index+1], colour, LINE_THICKNESS)
 		if write_video:
 			counter += 1
 			if counter%VIDEO_WRITE_FREQUENCY == 0:
@@ -99,7 +102,7 @@ if write_video:
 ##
 
 print("\nWriting final image")
-if DOWNSIZE:
+if downsize:
 	image = cv2.resize(image, (img_width//2, img_height//2), interpolation=cv2.INTER_LINEAR)
 
 cv2.imwrite("resultMap.png", image)
